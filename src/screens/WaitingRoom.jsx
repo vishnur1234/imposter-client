@@ -47,9 +47,9 @@ function WaitingRoom() {
             state: {
               roomCode,
               course: data.course || course,
-              players: data.playerList || joinedPlayers,
+              players: Array.isArray(data.playerList) ? data.playerList : [],
               topic: data.topic,
-              imposterIndex: data.imposterIndex,
+              imposterIndex: data.imposterIndex ?? 0,
             },
           });
         }

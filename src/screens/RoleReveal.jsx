@@ -8,9 +8,10 @@ function RoleReveal() {
   const navigate = useNavigate();
 
   const course = location.state?.course || "ACCA";
-  const playerList = location.state?.players || [];
+  const rawPlayers = location.state?.players;
+  const playerList = Array.isArray(rawPlayers) ? rawPlayers : [];
   const topic = location.state?.topic;
-  const imposterIndex = location.state?.imposterIndex ?? -1;
+  const imposterIndex = location.state?.imposterIndex ?? 0;
 
   const gamePlayers = playerList.map((p, i) => ({
     id: p.uid || i,
@@ -19,7 +20,9 @@ function RoleReveal() {
   }));
 
   const currentUid = auth.currentUser?.uid;
-  const myPlayer = gamePlayers.find((p) => p.id === currentUid) || gamePlayers[0];
+  const isSoloMode = !gamePlayers.some((p) => p.id === currentUid);
+
+  const myPlayer = isSoloMode ? null : (gamePlayers.find((p) => p.id === currentUid) || gamePlayers[0]);
   const isImposter = myPlayer?.role === "IMPOSTER";
 
   const [phase, setPhase] = useState("card");
@@ -27,6 +30,10 @@ function RoleReveal() {
   const [showWinner, setShowWinner] = useState(false);
   const [suspects, setSuspects] = useState({});
   const [selectedTopic, setSelectedTopic] = useState(topic);
+  const [soloIndex, setSoloIndex] = useState(0);
+
+  const soloPlayer = gamePlayers[soloIndex];
+  const soloIsImposter = soloPlayer?.role === "IMPOSTER";
 
   const toggleSuspect = (id) => {
     setSuspects((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -40,8 +47,18 @@ function RoleReveal() {
       setPhase("card");
       setShowWinner(false);
       setSuspects({});
+      setSoloIndex(0);
     } catch (error) {
       alert("Failed to generate topic");
+    }
+  };
+
+  const handleSoloNext = () => {
+    if (soloIndex < gamePlayers.length - 1) {
+      setSoloIndex(soloIndex + 1);
+      setRevealed(false);
+    } else {
+      setPhase("discussion");
     }
   };
 
@@ -157,6 +174,13 @@ function RoleReveal() {
   );
 
   if (phase === "card") {
+    const activePlayer = isSoloMode ? soloPlayer : myPlayer;
+    const activeIsImposter = isSoloMode ? soloIsImposter : isImposter;
+    const handleNext = isSoloMode ? handleSoloNext : () => setPhase("discussion");
+    const nextLabel = isSoloMode
+      ? (soloIndex < gamePlayers.length - 1 ? "Hide & Pass Device →" : "All Done — Start Discussion")
+      : "✓ I've Seen My Card — Go to Discussion";
+
     return wrapper(
       !revealed ? (
         <div style={{
@@ -167,24 +191,36 @@ function RoleReveal() {
           backdropFilter: "blur(10px)",
           animation: "fade-up 0.45s ease both",
         }}>
-          <span style={{
-            fontSize: 10, fontWeight: 700, color: "rgba(0,229,255,0.6)",
-            letterSpacing: "0.18em", textTransform: "uppercase",
-            border: "1px solid rgba(0,229,255,0.2)", padding: "4px 10px",
-            borderRadius: 20, background: "rgba(0,229,255,0.05)",
-            display: "inline-block", marginBottom: 32,
-          }}>{course}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: "rgba(0,229,255,0.6)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              border: "1px solid rgba(0,229,255,0.2)", padding: "4px 10px",
+              borderRadius: 20, background: "rgba(0,229,255,0.05)",
+            }}>{course}</span>
+            {isSoloMode && (
+              <div style={{ display: "flex", gap: 5 }}>
+                {gamePlayers.map((_, i) => (
+                  <div key={i} style={{
+                    width: 7, height: 7, borderRadius: "50%",
+                    background: i < soloIndex ? "rgba(124,58,237,0.4)" : i === soloIndex ? "#a78bfa" : "rgba(255,255,255,0.12)",
+                    boxShadow: i === soloIndex ? "0 0 8px rgba(167,139,250,0.8)" : "none",
+                    transition: "all 0.3s",
+                  }} />
+                ))}
+              </div>
+            )}
+          </div>
 
           <div style={{
             width: 72, height: 72, borderRadius: "50%",
             background: "linear-gradient(135deg, #4C1D95, #7C3AED)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 20px",
-            fontSize: 30,
+            margin: "0 auto 20px", fontSize: 30,
             boxShadow: "0 0 30px rgba(124,58,237,0.5)",
             animation: "float 3s ease-in-out infinite",
           }}>
-            {myPlayer?.name?.[0]?.toUpperCase() || "?"}
+            {activePlayer?.name?.[0]?.toUpperCase() || "?"}
           </div>
 
           <h1 style={{
@@ -192,13 +228,10 @@ function RoleReveal() {
             fontSize: "clamp(26px, 7vw, 34px)",
             fontWeight: 900, color: "#F0F0FF",
             letterSpacing: "0.06em", marginBottom: 10,
-          }}>{myPlayer?.name}</h1>
+          }}>{activePlayer?.name}</h1>
 
-          <p style={{
-            fontSize: 13, color: "rgba(255,255,255,0.35)",
-            marginBottom: 32, letterSpacing: "0.02em",
-          }}>
-            Only you can see your card — tap to reveal
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 32, letterSpacing: "0.02em" }}>
+            {isSoloMode ? "Hand the device over — tap to reveal your card" : "Only you can see your card — tap to reveal"}
           </p>
 
           <button className="rv-btn rv-btn-violet" onClick={() => setRevealed(true)}>
@@ -207,65 +240,54 @@ function RoleReveal() {
         </div>
       ) : (
         <div style={{
-          background: isImposter ? "rgba(127,29,29,0.15)" : "rgba(255,255,255,0.03)",
-          border: isImposter ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(52,211,153,0.2)",
+          background: activeIsImposter ? "rgba(127,29,29,0.15)" : "rgba(255,255,255,0.03)",
+          border: activeIsImposter ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(52,211,153,0.2)",
           borderRadius: 24, padding: "32px 24px",
           textAlign: "center",
           backdropFilter: "blur(10px)",
           animation: "flip-in 0.45s ease both",
-          boxShadow: isImposter
-            ? "0 0 40px rgba(239,68,68,0.12)"
-            : "0 0 40px rgba(52,211,153,0.08)",
+          boxShadow: activeIsImposter ? "0 0 40px rgba(239,68,68,0.12)" : "0 0 40px rgba(52,211,153,0.08)",
         }}>
-          <div style={{
-            display: "flex", justifyContent: "flex-end",
-            marginBottom: 28,
-          }}>
-            <span style={{
-              fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)",
-              letterSpacing: "0.12em",
-            }}>{myPlayer?.name}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.16em", textTransform: "uppercase" }}>
+              {activePlayer?.name}
+            </span>
+            {isSoloMode && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.2)", letterSpacing: "0.12em" }}>
+                {soloIndex + 1} / {gamePlayers.length}
+              </span>
+            )}
           </div>
 
-          {isImposter ? (
+          {activeIsImposter ? (
             <>
               <div style={{ marginBottom: 8 }}>
-                <span style={{
-                  fontSize: 11, fontWeight: 700, color: "rgba(239,68,68,0.6)",
-                  letterSpacing: "0.22em", textTransform: "uppercase",
-                }}>You Are</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(239,68,68,0.6)", letterSpacing: "0.22em", textTransform: "uppercase" }}>
+                  You Are
+                </span>
               </div>
-
               <h1 style={{
                 fontFamily: "'Orbitron', monospace",
                 fontSize: "clamp(38px, 11vw, 52px)",
                 fontWeight: 900, color: "#ef4444",
                 letterSpacing: "0.1em", textTransform: "uppercase",
-                marginBottom: 24,
-                animation: "imposter-pulse 2s ease-in-out infinite",
+                marginBottom: 24, animation: "imposter-pulse 2s ease-in-out infinite",
               }}>IMPOSTER</h1>
-
-              <p style={{
-                fontSize: 12, color: "rgba(255,255,255,0.35)",
-                marginBottom: 16, letterSpacing: "0.1em", textTransform: "uppercase",
-              }}>Guess the topic from these clues</p>
-
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 16, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                Guess the topic from these clues
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28 }}>
                 {selectedTopic?.clues?.map((clue, i) => (
                   <div key={i} style={{
-                    background: "rgba(239,68,68,0.07)",
-                    border: "1px solid rgba(239,68,68,0.18)",
+                    background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)",
                     borderRadius: 12, padding: "12px 16px",
                     display: "flex", alignItems: "center", gap: 12,
                     animation: `fade-up 0.4s ${0.1 + i * 0.07}s both`,
                   }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 800, color: "rgba(239,68,68,0.5)",
-                      fontFamily: "'Orbitron', monospace", minWidth: 20,
-                    }}>{String(i + 1).padStart(2, "0")}</span>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: "rgba(255,255,255,0.8)", textAlign: "left" }}>
-                      {clue}
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "rgba(239,68,68,0.5)", fontFamily: "'Orbitron', monospace", minWidth: 20 }}>
+                      {String(i + 1).padStart(2, "0")}
                     </span>
+                    <span style={{ fontSize: 14, fontWeight: 500, color: "rgba(255,255,255,0.8)", textAlign: "left" }}>{clue}</span>
                   </div>
                 ))}
               </div>
@@ -273,44 +295,36 @@ function RoleReveal() {
           ) : (
             <>
               <div style={{ marginBottom: 8 }}>
-                <span style={{
-                  fontSize: 11, fontWeight: 700, color: "rgba(52,211,153,0.7)",
-                  letterSpacing: "0.22em", textTransform: "uppercase",
-                }}>Your Topic Is</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(52,211,153,0.7)", letterSpacing: "0.22em", textTransform: "uppercase" }}>
+                  Your Topic Is
+                </span>
               </div>
-
               <div style={{
-                background: "rgba(52,211,153,0.06)",
-                border: "1px solid rgba(52,211,153,0.2)",
-                borderRadius: 18, padding: "28px 20px",
-                marginBottom: 16,
+                background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)",
+                borderRadius: 18, padding: "28px 20px", marginBottom: 16,
                 animation: "reveal-glow 1s ease forwards",
               }}>
                 <h1 style={{
                   fontFamily: "'Orbitron', monospace",
                   fontSize: "clamp(28px, 8vw, 38px)",
                   fontWeight: 900, color: "#F0F0FF",
-                  letterSpacing: "0.06em",
-                  textShadow: "0 0 30px rgba(52,211,153,0.3)",
+                  letterSpacing: "0.06em", textShadow: "0 0 30px rgba(52,211,153,0.3)",
                 }}>{selectedTopic?.answer}</h1>
               </div>
-
-              <p style={{
-                fontSize: 13, color: "rgba(255,255,255,0.3)",
-                marginBottom: 28, lineHeight: 1.6,
-              }}>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", marginBottom: 28, lineHeight: 1.6 }}>
                 Describe this in <strong style={{ color: "rgba(52,211,153,0.7)" }}>one word</strong>. Don't let the imposter guess it.
               </p>
             </>
           )}
 
-          <button className="rv-btn rv-btn-green" onClick={() => setPhase("discussion")}>
-            ✓ I've Seen My Card — Go to Discussion
+          <button className={`rv-btn ${isSoloMode ? "rv-btn-ghost" : "rv-btn-green"}`} onClick={handleNext}>
+            {nextLabel}
           </button>
         </div>
       )
     );
   }
+
 
   const imposterPlayer = gamePlayers.find((p) => p.role === "IMPOSTER");
 
