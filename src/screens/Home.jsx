@@ -1,7 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "firebase/auth";
-import { auth } from "../firebase/firebase";
+import { auth, db } from "../firebase/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+import { useTheme } from "../context/ThemeContext";
+import { Trophy, Sun, Moon, User, LogOut } from "lucide-react";
 function ParticleCanvas() {
   const canvasRef = useRef(null);
 
@@ -288,6 +291,21 @@ function GameButton({ onClick, accent, label, sub, delay = "0s", icon }) {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { theme, toggleTheme, colors } = useTheme();
+  const [coins, setCoins] = useState(0);
+
+  const myUid = auth.currentUser?.uid;
+  const isDark = theme === "dark";
+
+  useEffect(() => {
+    if (!myUid) return;
+    const unsub = onSnapshot(doc(db, "user_stats", myUid), (snap) => {
+      if (snap.exists()) {
+        setCoins(snap.data().highScore || 0);
+      }
+    });
+    return () => unsub();
+  }, [myUid]);
 
   const handleLogout = async () => {
     try {
@@ -300,61 +318,59 @@ export default function Home() {
 
   return (
     <>
-      {/* Google Fonts */}
+      {/* Google Fonts & Styles */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap');
 
-        @keyframes fade-up {
-          from { opacity: 0; transform: translateY(28px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
+        @keyframes scan-line {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100vh); }
         }
         @keyframes pulse-ring {
-          0%   { opacity: 0.6; transform: translate(-50%,-50%) scale(1); }
-          70%  { opacity: 0;   transform: translate(-50%,-50%) scale(1.15); }
-          100% { opacity: 0;   transform: translate(-50%,-50%) scale(1.15); }
-        }
-        @keyframes glitch-top {
-          0%,90%,100% { transform: translate(0); }
-          91%          { transform: translate(-3px, 1px); }
-          93%          { transform: translate(3px, -1px); }
-          95%          { transform: translate(-2px, 0); }
-        }
-        @keyframes glitch-bot {
-          0%,90%,100% { transform: translate(0); }
-          91%          { transform: translate(3px, 1px); }
-          93%          { transform: translate(-3px, -1px); }
-          95%          { transform: translate(2px, 0); }
-        }
-        @keyframes shimmer {
-          from { background-position: 200% center; }
-          to   { background-position: -200% center; }
+          0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+          50% { opacity: 0.5; }
+          100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0; }
         }
         @keyframes float {
-          0%,100% { transform: translateY(0px); }
-          50%      { transform: translateY(-7px); }
+          0% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-6px) rotate(3deg); }
+          100% { transform: translateY(0px) rotate(0deg); }
+        }
+        @keyframes glitch-top {
+          0%, 100% { transform: translate(0); }
+          10% { transform: translate(-1.5px, -1px); }
+          20% { transform: translate(1.5px, 1px); }
+          30% { transform: translate(-1.5px, 1px); }
+          40% { transform: translate(1px, -1px); }
+          50% { transform: translate(-1px, 1.5px); }
+          60% { transform: translate(1px, 1px); }
+        }
+        @keyframes glitch-bot {
+          0%, 100% { transform: translate(0); }
+          10% { transform: translate(1px, 1px); }
+          20% { transform: translate(-1px, -1.5px); }
+          30% { transform: translate(1.5px, -1px); }
+          40% { transform: translate(-1.5px, 1px); }
+          50% { transform: translate(1px, -1px); }
+          60% { transform: translate(-1px, 1px); }
+        }
+        @keyframes fade-up {
+          0% { opacity: 0; transform: translateY(15px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
         @keyframes badge-pop {
-          0%   { opacity: 0; transform: scale(0.7) rotate(-6deg); }
-          60%  { transform: scale(1.08) rotate(2deg); }
-          100% { opacity: 1; transform: scale(1) rotate(0deg); }
+          0% { transform: scale(0.85); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
         }
-        @keyframes scan-line {
-          0%   { top: -2px; opacity: 0; }
-          10%  { opacity: 0.4; }
-          90%  { opacity: 0.4; }
-          100% { top: 100%; opacity: 0; }
-        }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
       `}</style>
 
       <div
         style={{
           minHeight: "100vh",
-          background: "radial-gradient(ellipse at 50% 0%, #1a0533 0%, #050508 55%)",
+          background: isDark
+            ? "radial-gradient(ellipse at 50% 0%, #1a0533 0%, #050508 55%)"
+            : "radial-gradient(ellipse at 50% 0%, #e3f0ff 0%, #f7f9fc 70%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -362,50 +378,134 @@ export default function Home() {
           position: "relative",
           overflow: "hidden",
           fontFamily: "'Inter', sans-serif",
+          transition: "background 0.3s ease",
         }}
       >
         <ParticleCanvas />
 
-        <button
-          onClick={handleLogout}
+        {/* Dynamic Premium Header Bar */}
+        <div
           style={{
             position: "absolute",
-            top: 18,
-            right: 18,
+            top: 0,
+            left: 0,
+            right: 0,
             zIndex: 10,
             display: "flex",
             alignItems: "center",
-            gap: 6,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 10,
-            padding: "7px 13px",
-            cursor: "pointer",
-            color: "rgba(255,255,255,0.4)",
-            fontSize: 12,
-            fontWeight: 600,
-            fontFamily: "'Inter', sans-serif",
-            letterSpacing: "0.08em",
-            transition: "all 0.18s ease",
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = "rgba(239,68,68,0.12)";
-            e.currentTarget.style.borderColor = "rgba(239,68,68,0.35)";
-            e.currentTarget.style.color = "#fca5a5";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
-            e.currentTarget.style.color = "rgba(255,255,255,0.4)";
+            justifyContent: "between",
+            padding: "16px 20px",
+            background: isDark ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.4)",
+            backdropFilter: "blur(10px)",
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,0,0,0.05)",
           }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-          Logout
-        </button>
+          {/* Coins balance pill */}
+          <div
+            onClick={() => navigate("/coin-history")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: isDark ? "rgba(245,158,11,0.08)" : "rgba(245,158,11,0.12)",
+              border: isDark ? "1px solid rgba(245,158,11,0.25)" : "1px solid rgba(245,158,11,0.4)",
+              borderRadius: 14,
+              padding: "6px 14px",
+              cursor: "pointer",
+              transition: "transform 0.15s ease",
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = "scale(1.03)"}
+            onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+          >
+            <Trophy size={14} className="text-amber-500" />
+            <span style={{ fontSize: 13, fontWeight: 800, color: isDark ? "#FFF" : "#1A1A1A", fontFamily: "'Orbitron', sans-serif" }}>
+              {coins}
+            </span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(245,158,11,0.85)", letterSpacing: "0.05em" }}>
+              coins
+            </span>
+          </div>
+
+          {/* Action buttons list */}
+          <div style={{ display: "flex", itemsCenter: "center", gap: 10 }}>
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
+                borderRadius: 10,
+                width: 34,
+                height: 34,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
+            >
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+
+            {/* Profile settings */}
+            <button
+              onClick={() => navigate("/profile")}
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
+                borderRadius: 10,
+                width: 34,
+                height: 34,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
+            >
+              <User size={15} />
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "rgba(255,255,255,0.04)",
+                border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
+                borderRadius: 10,
+                padding: "0 12px",
+                height: 34,
+                cursor: "pointer",
+                color: "rgba(239,68,68,0.7)",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = "rgba(239,68,68,0.12)";
+                e.currentTarget.style.color = "#ef4444";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                e.currentTarget.style.color = "rgba(239,68,68,0.7)";
+              }}
+            >
+              <LogOut size={13} />
+              Logout
+            </button>
+          </div>
+        </div>
 
         <div
           style={{
@@ -420,12 +520,12 @@ export default function Home() {
           }}
         />
 
-        <div style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 2 }}>
+        <div style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 2, paddingTop: 60 }}>
 
           <div
             style={{
               textAlign: "center",
-              marginBottom: 44,
+              marginBottom: 36,
               position: "relative",
               animation: "fade-up 0.7s 0.1s both",
             }}
@@ -434,8 +534,8 @@ export default function Home() {
 
             <div
               style={{
-                fontSize: 52,
-                marginBottom: 10,
+                fontSize: 48,
+                marginBottom: 6,
                 animation: "float 3.5s ease-in-out infinite",
                 position: "relative",
                 zIndex: 1,
@@ -448,7 +548,7 @@ export default function Home() {
             <h1
               style={{
                 fontFamily: "'Orbitron', monospace",
-                fontSize: "clamp(36px, 10vw, 52px)",
+                fontSize: "clamp(34px, 9vw, 48px)",
                 fontWeight: 900,
                 letterSpacing: "0.12em",
                 lineHeight: 1,
@@ -464,15 +564,15 @@ export default function Home() {
               <span
                 style={{
                   display: "inline-block",
-                  fontSize: 11,
-                  fontWeight: 600,
+                  fontSize: 10,
+                  fontWeight: 650,
                   letterSpacing: "0.22em",
-                  color: "rgba(0,229,255,0.8)",
+                  color: isDark ? "rgba(0,229,255,0.8)" : "#0ea5e9",
                   textTransform: "uppercase",
-                  border: "1px solid rgba(0,229,255,0.25)",
+                  border: isDark ? "1px solid rgba(0,229,255,0.25)" : "1px solid rgba(14,165,233,0.3)",
                   padding: "4px 14px",
                   borderRadius: 20,
-                  background: "rgba(0,229,255,0.06)",
+                  background: isDark ? "rgba(0,229,255,0.06)" : "rgba(14,165,233,0.05)",
                 }}
               >
                 ACCA &nbsp;•&nbsp; CMA &nbsp;•&nbsp; Revision Game
@@ -481,14 +581,14 @@ export default function Home() {
 
             <div
               style={{
-                marginTop: 16,
+                marginTop: 14,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 7,
                 background: "rgba(57,255,20,0.08)",
                 border: "1px solid rgba(57,255,20,0.3)",
                 borderRadius: 20,
-                padding: "5px 14px",
+                padding: "4px 12px",
                 animation: "badge-pop 0.5s 1s both",
                 position: "relative",
                 zIndex: 1,
@@ -496,8 +596,8 @@ export default function Home() {
             >
               <span
                 style={{
-                  width: 7,
-                  height: 7,
+                  width: 6,
+                  height: 6,
                   borderRadius: "50%",
                   background: "#39FF14",
                   boxShadow: "0 0 8px #39FF14",
@@ -505,25 +605,25 @@ export default function Home() {
                   animation: "pulse-ring 2s infinite",
                 }}
               />
-              <span style={{ fontSize: 12, color: "#39FF14", fontWeight: 600, letterSpacing: "0.08em" }}>
+              <span style={{ fontSize: 11, color: "#39FF14", fontWeight: 600, letterSpacing: "0.08em" }}>
                 2,841 players online
               </span>
             </div>
           </div>
 
-          <GameButton
+          {/* <GameButton
             onClick={() => navigate("/solo")}
             accent="violet"
             label="Solo Mode"
             sub="Pass & Play — one device, full chaos"
             delay="0.35s"
             icon="🎮"
-          />
+          /> */}
 
           <GameButton
             onClick={() => navigate("/multiplayer")}
             accent="emerald"
-            label="Multiplayer"
+            label="Start Game"
             sub="Challenge friends online in real-time"
             delay="0.5s"
             icon="🌐"
@@ -534,17 +634,18 @@ export default function Home() {
               display: "flex",
               alignItems: "center",
               gap: 12,
-              margin: "20px 0",
+              margin: "16px 0",
               animation: "fade-up 0.6s 0.65s both",
             }}
           >
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", letterSpacing: "0.18em" }}>
+            <div style={{ flex: 1, height: 1, background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
+            <span style={{ fontSize: 10, color: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.3)", letterSpacing: "0.18em" }}>
               OR
             </span>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
+            <div style={{ flex: 1, height: 1, background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
           </div>
 
+          {/* Active 3-column sub grid */}
           <div
             style={{
               display: "grid",
@@ -554,42 +655,61 @@ export default function Home() {
             }}
           >
             {[
-              { icon: "🎯", label: "Boost Marks" },
-              { icon: "📈", label: "Score Higher" },
-              { icon: "🏆", label: "Top Rank" },
-            ].map(({ icon, label }) => (
-              <div
+              { label: "Daily Chest", route: "/daily-reward", emoji: "🎁", col: "#f59e0b" },
+              { label: "Leaderboard", route: "/rankings", emoji: "🏆", col: "#00E5FF" },
+              { label: "Game Rules", route: "/rules", emoji: "📜", col: "#8b5cf6" },
+            ].map(({ label, route, emoji, col }) => (
+              <button
                 key={label}
+                onClick={() => navigate(route)}
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: 14,
-                  padding: "13px 8px",
+                  background: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.75)",
+                  border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.08)",
+                  borderRadius: 16,
+                  padding: "16px 12px",
                   textAlign: "center",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  transition: "all 0.2s ease",
+                  boxShadow: isDark ? "none" : "0 4px 6px rgba(0,0,0,0.02)",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.borderColor = col;
+                  e.currentTarget.style.boxShadow = `0 4px 15px ${col}25`;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.borderColor = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
+                  e.currentTarget.style.boxShadow = isDark ? "none" : "0 4px 6px rgba(0,0,0,0.02)";
                 }}
               >
-                <div style={{ fontSize: 22, marginBottom: 5 }}>{icon}</div>
+                <div style={{ fontSize: 24 }}>{emoji}</div>
                 <div
                   style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "rgba(240,240,255,0.75)",
-                    letterSpacing: "0.08em",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: isDark ? "rgba(240,240,255,0.85)" : "#334155",
+                    letterSpacing: "0.06em",
                     textTransform: "uppercase",
                   }}
                 >
                   {label}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
 
           <p
             style={{
               textAlign: "center",
-              marginTop: 28,
-              fontSize: 11,
-              color: "rgba(255,255,255,0.18)",
+              marginTop: 24,
+              fontSize: 10,
+              color: isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.3)",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               animation: "fade-up 0.6s 0.9s both",

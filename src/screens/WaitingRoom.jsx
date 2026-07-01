@@ -1,10 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
-import { db } from "../firebase/firebase";
+import { doc, onSnapshot, updateDoc, getDoc } from "firebase/firestore";
+import { db, auth } from "../firebase/firebase";
 import { generateTopic } from "../generateTopic";
+import { ChevronLeft } from "lucide-react";
 
-function WaitingRoom() {
+export default function WaitingRoom() {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -12,21 +13,49 @@ function WaitingRoom() {
   const [starting, setStarting] = useState(false);
 
   const roomCode = location.state?.roomCode;
-  const course = location.state?.course;
-  const players = location.state?.players;
+  const course = location.state?.course || "general";
+  const players = location.state?.players || 4;
   const isHost = location.state?.isHost;
   const isDemoMode = location.state?.isDemoMode;
 
   const startGame = async () => {
+    if (joinedPlayers.length < 2 && !isDemoMode) {
+      alert("Need at least 2 players to start a game.");
+      return;
+    }
     setStarting(true);
     try {
       const parsedTopic = await generateTopic(course);
-      const imposterIndex = Math.floor(Math.random() * joinedPlayers.length);
+      if (!parsedTopic || !parsedTopic.answer) {
+        throw new Error("Failed to generate a valid topic.");
+      }
+
+      const imposterPlayer = joinedPlayers[Math.floor(Math.random() * joinedPlayers.length)];
+      if (!imposterPlayer) {
+        throw new Error("No players joined.");
+      }
+
+      const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const imposterIndex = joinedPlayers.findIndex(p => p.uid === imposterPlayer.uid);
 
       await updateDoc(doc(db, "rooms", roomCode), {
+        gameStatus: "reveal",
         started: true,
-        topic: parsedTopic,
+        gameId,
         imposterIndex,
+        topic: parsedTopic, // compatibility
+        gameData: {
+          answer: parsedTopic.answer,
+          clue: parsedTopic.clue || "",
+          imposterId: imposterPlayer.uid
+        },
+        readyPlayers: [],
+        hints: [],
+        votes: {}
+      });
+
+      navigate("/gameplay", {
+        state: { roomCode, course, isHost }
       });
     } catch (error) {
       console.log(error);
@@ -37,26 +66,44 @@ function WaitingRoom() {
 
   useEffect(() => {
     if (!roomCode) return;
-    const unsubscribe = onSnapshot(doc(db, "rooms", roomCode), (docSnap) => {
+    const unsubscribe = onSnapshot(doc(db, "rooms", roomCode), async (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setJoinedPlayers(data.playerList || []);
+        const playersList = data.players || data.playerList || [];
 
-        if (data.started && data.topic) {
-          navigate("/reveal", {
+        // Enrich names from user_stats
+        const enriched = await Promise.all(
+          playersList.map(async (p) => {
+            try {
+              const statSnap = await getDoc(doc(db, "user_stats", p.uid));
+              if (statSnap.exists()) {
+                const sd = statSnap.data();
+                const gTag = sd.playerName || sd.name;
+                if (gTag) return { ...p, name: gTag };
+              }
+            } catch (_) {}
+            return p;
+          })
+        );
+
+        setJoinedPlayers(enriched);
+
+        if (data.gameStatus === "reveal" || data.gameStatus === "round" || (data.started && data.topic)) {
+          navigate("/gameplay", {
             state: {
               roomCode,
-              course: data.course || course,
-              players: Array.isArray(data.playerList) ? data.playerList : [],
-              topic: data.topic,
-              imposterIndex: data.imposterIndex ?? 0,
+              course: data.category || data.course || course,
+              isHost,
             },
           });
         }
+      } else {
+        alert("Room was disbanded.");
+        navigate("/home");
       }
     });
     return () => unsubscribe();
-  }, [roomCode]);
+  }, [roomCode, isHost, navigate, course]);
 
   return (
     <div style={{
@@ -77,7 +124,6 @@ function WaitingRoom() {
       `}</style>
 
       <div style={{ width: "100%", maxWidth: 440, animation: "fade-up 0.5s ease both" }}>
-
         <div style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.08)",
@@ -85,7 +131,6 @@ function WaitingRoom() {
           padding: "28px 24px",
           backdropFilter: "blur(10px)",
         }}>
-
           <div style={{ textAlign: "center", marginBottom: 28 }}>
             <p style={{
               fontSize: 10, fontWeight: 700, letterSpacing: "0.25em",
@@ -97,18 +142,6 @@ function WaitingRoom() {
               color: "#F0F0FF", letterSpacing: "0.08em",
             }}>Room {roomCode}</h1>
           </div>
-
-          {isDemoMode && (
-            <div style={{
-              marginBottom: 20, padding: "10px 14px",
-              background: "rgba(245,158,11,0.08)",
-              border: "1px solid rgba(245,158,11,0.25)",
-              borderRadius: 14, textAlign: "center",
-              fontSize: 12, color: "rgba(245,158,11,0.85)", fontWeight: 600,
-            }}>
-              ⚠️ Running in Local Demo Mode
-            </div>
-          )}
 
           <div style={{
             background: "rgba(255,255,255,0.03)",
@@ -143,9 +176,11 @@ function WaitingRoom() {
                   <div style={{
                     width: 28, height: 28, borderRadius: "50%",
                     background: "linear-gradient(135deg, #4C1D95, #7C3AED)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    display: "flex", alignItems: "center", justifyCenter: "center",
                     fontSize: 12, fontWeight: 800, color: "#F0F0FF",
                     flexShrink: 0,
+                    textAlign: "center",
+                    lineHeight: "28px",
                   }}>
                     {player.name?.[0]?.toUpperCase() || "?"}
                   </div>
@@ -244,5 +279,3 @@ function WaitingRoom() {
     </div>
   );
 }
-
-export default WaitingRoom;

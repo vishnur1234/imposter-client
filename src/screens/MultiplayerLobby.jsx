@@ -26,24 +26,49 @@ function MultiplayerLobby() {
       }
 
       const roomData = roomSnap.data();
+      const myUid = auth.currentUser?.uid || "guest";
+      
+      let userName = auth.currentUser?.email?.split("@")[0] || "Guest Player";
+      try {
+        const statsSnap = await getDoc(doc(db, "user_stats", myUid));
+        if (statsSnap.exists()) {
+          userName = statsSnap.data().playerName || statsSnap.data().name || userName;
+        }
+      } catch (_) {}
 
-      // Add current user to playerList
-      await updateDoc(roomRef, {
-        playerList: arrayUnion({
-          uid: auth.currentUser?.uid || "guest",
-          name: auth.currentUser?.email || "Guest Player",
-        }),
-      });
+      const playerObj = { uid: myUid, name: userName, score: 0 };
+      const listObj = { uid: myUid, name: userName };
 
-      navigate("/waiting-room", {
-        state: {
-          roomCode,
-          course: roomData.course,
-          players: roomData.players,
-          isHost: false,
-          isDemoMode: false,
-        },
-      });
+      // Add current user to player list and active score trackers
+      const playersList = roomData.players || [];
+      const alreadyInRoom = playersList.some(p => p.uid === myUid);
+
+      if (!alreadyInRoom) {
+        await updateDoc(roomRef, {
+          players: arrayUnion(playerObj),
+          playerList: arrayUnion(listObj),
+        });
+      }
+
+      if (roomData.gameMode === "Offline") {
+        navigate("/offline-lobby", {
+          state: {
+            roomCode,
+            course: roomData.course || roomData.category,
+            isHost: false,
+          },
+        });
+      } else {
+        navigate("/waiting-room", {
+          state: {
+            roomCode,
+            course: roomData.course || roomData.category,
+            players: roomData.playersRequired || roomData.players,
+            isHost: false,
+            isDemoMode: false,
+          },
+        });
+      }
     } catch (error) {
       console.error("Failed to join room:", error);
       alert(`Failed to join room: ${error.message || error}`);
