@@ -176,7 +176,7 @@ export default function OfflineVoting() {
     }}>
       <div className="flex-grow flex items-center justify-center p-6 z-10">
         <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between min-h-[460px]">
-          
+
           <div className="w-full flex justify-between items-center mb-6">
             <span className="bg-rose-650 px-2.5 py-0.5 rounded text-[8px] font-black tracking-widest text-white font-mono">
               OFFLINE VOTING
@@ -197,15 +197,13 @@ export default function OfflineVoting() {
                     <button
                       key={p.uid}
                       onClick={() => setSelected(p.uid)}
-                      className={`w-full flex items-center gap-3 p-3.5 border rounded-2xl text-left transition select-none ${
-                        sel 
-                          ? "border-rose-500 bg-rose-500/10 shadow-sm" 
+                      className={`w-full flex items-center gap-3 p-3.5 border rounded-2xl text-left transition select-none ${sel
+                          ? "border-rose-500 bg-rose-500/10 shadow-sm"
                           : "bg-slate-950 border-slate-850"
-                      }`}
+                        }`}
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black font-mono ${
-                        sel ? "bg-rose-500/10 border border-rose-500/35 text-rose-500" : "bg-violet-600/10 border border-violet-500 text-violet-400"
-                      }`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black font-mono ${sel ? "bg-rose-500/10 border border-rose-500/35 text-rose-500" : "bg-violet-600/10 border border-violet-500 text-violet-400"
+                        }`}>
                         {p.name?.[0]?.toUpperCase() || "?"}
                       </div>
                       <span className={`flex-1 text-sm font-semibold ${sel ? "text-rose-455 font-bold" : "text-slate-355"}`}>

@@ -502,11 +502,11 @@ export default function GamePlay() {
               <div className="w-full flex flex-col items-center">
                 <CheckCircle2 size={56} className="text-emerald-500" />
                 <span className="text-[10px] font-bold text-slate-500 tracking-wider mt-4">YOUR SECRET TOPIC IS</span>
-                
+
                 <div className="w-full bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-2xl py-6 my-4 shadow-inner">
                   <h1 className="text-2xl font-black text-emerald-400 font-mono tracking-wide">{gameData.answer}</h1>
                 </div>
-                
+
                 <p className="text-xs text-slate-400 max-w-[280px]">
                   Describe it in <span className="text-emerald-400 font-bold">one word</span>. Avoid making it too easy for the imposter!
                 </p>
@@ -561,9 +561,8 @@ export default function GamePlay() {
                     ⚡ IT'S YOUR TURN! Submit a one-word hint.
                   </span>
                   {roomData.clueTimer > 0 ? (
-                    <div className={`px-3 py-1 rounded-full border text-xs font-bold flex items-center gap-1.5 ${
-                      secRemaining <= 10 ? "bg-rose-500/10 border-rose-500/30 text-rose-500" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                    }`}>
+                    <div className={`px-3 py-1 rounded-full border text-xs font-bold flex items-center gap-1.5 ${secRemaining <= 10 ? "bg-rose-500/10 border-rose-500/30 text-rose-500" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                      }`}>
                       <Clock size={12} />
                       <span>Time Left: {secRemaining}s</span>
                     </div>
@@ -600,11 +599,10 @@ export default function GamePlay() {
           {roundHints.map((hintObj, idx) => (
             <div
               key={idx}
-              className={`flex items-center gap-3 p-3 rounded-2xl border ${
-                hintObj.uid === myUid 
-                  ? "bg-violet-500/10 border-violet-500/40" 
+              className={`flex items-center gap-3 p-3 rounded-2xl border ${hintObj.uid === myUid
+                  ? "bg-violet-500/10 border-violet-500/40"
                   : "bg-slate-950 border-slate-850"
-              }`}
+                }`}
             >
               <div className="w-8 h-8 rounded-full bg-violet-600/10 border border-violet-500 flex items-center justify-center text-xs font-black text-violet-400 font-mono">
                 {hintObj.name?.[0]?.toUpperCase() || "?"}
@@ -720,15 +718,13 @@ export default function GamePlay() {
                   <button
                     key={player.uid}
                     onClick={() => setSelectedVoteUid(player.uid)}
-                    className={`w-full flex items-center gap-3 p-3.5 border rounded-2xl text-left transition select-none ${
-                      selected 
-                        ? "border-rose-500 bg-rose-500/10 shadow-sm" 
+                    className={`w-full flex items-center gap-3 p-3.5 border rounded-2xl text-left transition select-none ${selected
+                        ? "border-rose-500 bg-rose-500/10 shadow-sm"
                         : "bg-slate-950 border-slate-850"
-                    }`}
+                      }`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black font-mono ${
-                      selected ? "bg-rose-500/10 border border-rose-500/35 text-rose-500" : "bg-violet-600/10 border border-violet-500 text-violet-400"
-                    }`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black font-mono ${selected ? "bg-rose-500/10 border border-rose-500/35 text-rose-500" : "bg-violet-600/10 border border-violet-500 text-violet-400"
+                      }`}>
                       {player.name?.[0]?.toUpperCase() || "?"}
                     </div>
                     <span className={`flex-1 text-sm font-semibold ${selected ? "text-rose-455 font-bold" : "text-slate-300"}`}>
@@ -899,14 +895,14 @@ export default function GamePlay() {
               BONUS ROUND GUESS BY {imposterPlayer?.name?.toUpperCase()}:
             </span>
             <span className="text-sm font-black text-slate-200 block font-mono">"{roomData.imposterGuess}"</span>
-            
+
             <div className="flex items-center gap-1.5 text-xs">
               <div className={`w-1.5 h-1.5 rounded-full ${roomData.imposterGuessCorrect ? "bg-emerald-500" : "bg-rose-500"}`} />
               <span className={roomData.imposterGuessCorrect ? "text-emerald-450 font-bold" : "text-rose-450 font-bold"}>
                 {roomData.imposterGuessCorrect ? "CORRECT GUESS (+50 pts)" : "INCORRECT GUESS (0 pts)"}
               </span>
             </div>
-            
+
             <span className={`text-[10px] font-bold block ${roomData.imposterSurvives ? "text-emerald-400" : "text-rose-400"}`}>
               {roomData.imposterSurvives ? "🎭 Imposter survived the votes!" : "👮 Imposter was caught!"}
             </span>
@@ -926,11 +922,10 @@ export default function GamePlay() {
             return (
               <div
                 key={player.uid}
-                className={`flex items-center gap-3 p-3.5 border rounded-2xl ${
-                  isFirst 
-                    ? "border-amber-500/40 bg-amber-550/5" 
+                className={`flex items-center gap-3 p-3.5 border rounded-2xl ${isFirst
+                    ? "border-amber-500/40 bg-amber-550/5"
                     : "bg-slate-950 border-slate-850"
-                }`}
+                  }`}
               >
                 <div className="w-6 flex items-center justify-center">
                   {isFirst ? (

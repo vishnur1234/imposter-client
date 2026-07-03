@@ -99,7 +99,7 @@ export default function OfflineRoleReveal() {
     }}>
       <div className="flex-grow flex items-center justify-center p-6 z-10">
         <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center justify-between min-h-[460px] text-center">
-          
+
           {!revealed ? (
             <div className="w-full flex flex-col items-center flex-grow justify-between py-4">
               <div className="w-full flex justify-between items-center mb-6">
@@ -147,7 +147,7 @@ export default function OfflineRoleReveal() {
                           <div className="w-6 h-6 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-[10px] font-black text-rose-500 font-mono">
                             01
                           </div>
-                          <p className="text-xs text-slate-350 font-mono">{clue}</p>
+                          <p className="text-xs text-white font-mono">{clue}</p>
                         </div>
                       ))}
                     </div>
@@ -157,11 +157,11 @@ export default function OfflineRoleReveal() {
                 <div className="w-full flex flex-col items-center">
                   <CheckCircle2 size={56} className="text-emerald-500" />
                   <span className="text-[10px] font-bold text-slate-500 tracking-wider mt-4">YOUR SECRET TOPIC IS</span>
-                  
+
                   <div className="w-full bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-2xl py-6 my-4 shadow-inner">
                     <h1 className="text-2xl font-black text-emerald-400 font-mono tracking-wide">{gameData.answer}</h1>
                   </div>
-                  
+
                   <p className="text-xs text-slate-400 max-w-[280px]">
                     Describe it verbally in <span className="text-emerald-400 font-bold">one word</span> to the group when it is your turn.
                   </p>

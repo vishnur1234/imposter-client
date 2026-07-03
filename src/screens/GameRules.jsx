@@ -102,9 +102,8 @@ function AccordionStep({ step }) {
   return (
     <div
       onClick={() => setExpanded(!expanded)}
-      className={`border rounded-2xl p-4 cursor-pointer select-none transition ${
-        expanded ? `${step.accentColor} ${step.bgColor}` : "border-slate-800 bg-slate-900/40"
-      }`}
+      className={`border rounded-2xl p-4 cursor-pointer select-none transition ${expanded ? `${step.accentColor} ${step.bgColor}` : "border-slate-800 bg-slate-900/40"
+        }`}
     >
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-full border border-slate-800 flex items-center justify-center text-xl bg-slate-950`}>
@@ -164,7 +163,7 @@ export default function GameRules() {
       {/* Scrollable Rules Container */}
       <div className="flex-1 overflow-y-auto p-6 relative z-10 flex flex-col items-center">
         <div className="w-full max-w-md space-y-5">
-          
+
           {/* Welcome Info Card */}
           <div className="bg-indigo-950/20 border border-indigo-500/20 rounded-3xl p-6 flex flex-col items-center text-center space-y-3">
             <BookOpen size={40} className="text-indigo-400" />

@@ -105,7 +105,7 @@ export default function OfflineTurn() {
     }}>
       <div className="flex-grow flex items-center justify-center p-6 z-10">
         <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center justify-between min-h-[460px] text-center">
-          
+
           <div className="w-full flex justify-between items-center mb-6">
             <span className="bg-violet-500/10 border border-violet-500/35 px-2.5 py-0.5 rounded text-[8px] font-black tracking-widest text-violet-400 font-mono">
               ROUND {currentRound} OF {totalRounds}
